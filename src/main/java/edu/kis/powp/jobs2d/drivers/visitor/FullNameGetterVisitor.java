@@ -40,7 +40,6 @@ public class FullNameGetterVisitor implements DriverVisitor {
     @Override
     public void visit(RecordingDriver driver) {
         builder.append(driver.toString());
-        driver.getTarget().accept(this);
     }
 
     @Override
@@ -52,7 +51,6 @@ public class FullNameGetterVisitor implements DriverVisitor {
     @Override
     public void visit(UsageMonitorDriver driver) {
         builder.append(driver.toString());
-        driver.getInnerDriver().accept(this);
     }
 
     public String getAndResetFullName() {

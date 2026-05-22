@@ -19,7 +19,6 @@ import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
 import edu.kis.powp.jobs2d.drivers.logger.TrackingLoggerDriver;
 import edu.kis.powp.jobs2d.drivers.packet_composite.CompositeDriver;
 import edu.kis.powp.jobs2d.drivers.transformations.*;
-import edu.kis.powp.jobs2d.events.SelectLoadSecretCommandOptionListener;
 import edu.kis.powp.jobs2d.events.SelectRunCurrentCommandOptionListener;
 import edu.kis.powp.jobs2d.events.SelectTestFigure2OptionListener;
 import edu.kis.powp.jobs2d.events.SelectTestFigureOptionListener;
@@ -33,7 +32,6 @@ import edu.kis.powp.jobs2d.events.*;
 import edu.kis.powp.jobs2d.features.*;
 import edu.kis.powp.jobs2d.events.SelectLoadRecordedMacroOptionListener;
 import edu.kis.powp.jobs2d.events.SelectClearPanelOptionListener;
-import edu.kis.powp.jobs2d.events.SelectToggleRecordingOptionListener;
 import edu.kis.powp.jobs2d.events.SelectClearRecordingOptionListener;
 import edu.kis.powp.jobs2d.command.gui.CommandCatalogWindow;
 
@@ -81,16 +79,6 @@ public class TestJobs2dApp {
 
         application.addTest("Deep copy visitor test", new SelectDeepCopyVisitorTestListener());
 
-        RecordingDriver rec = RecordingFeature.getRecordingDriver();
-        boolean initial = rec.isRecordingEnabled();
-
-        application.addComponentMenuElementWithCheckBox(
-                DriverFeature.class,
-                "Recording",
-                new SelectToggleRecordingOptionListener(rec),
-                initial
-        );
-
         application.addComponentMenuElement(
                 DriverFeature.class,
                 "Clear recording",
@@ -104,9 +92,6 @@ public class TestJobs2dApp {
      * @param application Application context.
      */
     private static void setupDrivers(Application application) {
-        VisitableDriver TrackingLoggerDriver = new TrackingLoggerDriver();
-        DriverFeature.addDriver("Tracking Logger driver", TrackingLoggerDriver);
-
         DrawPanelController drawerController = DrawerFeature.getDrawerController();
         VisitableDriver driver = new LineDriverAdapter(drawerController, LineFactory.getBasicLine(), "basic");
 
@@ -121,7 +106,6 @@ public class TestJobs2dApp {
         DriverFeature.updateDriverInfo();
 
         CompositeDriver basicCompositeDriver = new CompositeDriver("Basic & Log Composite Driver");
-        basicCompositeDriver.addDriver(TrackingLoggerDriver);
         basicCompositeDriver.addDriver(driver);
         DriverFeature.addDriver(basicCompositeDriver.toString(), basicCompositeDriver);
 
@@ -143,15 +127,9 @@ public class TestJobs2dApp {
 
         VisitableDriver scaledAndRotatedDriver = new TransformingDriver(scaledDriver, rotate, "Transform: Scaled 2x & Rotated 45");
         DriverFeature.addDriver(scaledAndRotatedDriver.toString(), scaledAndRotatedDriver);
-        UsageMonitorDriver monitoredDriver = new UsageMonitorDriver(driver);
-
-        monitoredDriver.getPublisher().addSubscriber(new LoggerUsageSubscriber(monitoredDriver));
-        DriverFeature.addDriver("Line Simulator (Monitored)", monitoredDriver);
-
 
         CompositeDriver chaosCompositeDriver = new CompositeDriver("Chaos Composite Driver");
         chaosCompositeDriver.addDriver(driver);
-        chaosCompositeDriver.addDriver(TrackingLoggerDriver);
         chaosCompositeDriver.addDriver(scaledDownDriver);
         DriverFeature.addDriver(chaosCompositeDriver.toString(), chaosCompositeDriver);
 
@@ -164,7 +142,29 @@ public class TestJobs2dApp {
 
         animatedDriver = new RealTimeDriver(driver, 1, 1, "Real-Time Driver 10x speed");
         DriverFeature.addDriver(animatedDriver.toString(), animatedDriver);
+
     }
+
+    /**
+     * Setup independent, optional driver extensions.
+     *
+     * @param application Application context.
+     */
+    private static void setupExtensions(Application application) {
+        var driverManager = DriverFeature.getDriverManager();
+
+        TrackingLoggerDriver loggerExtension = new TrackingLoggerDriver();
+        DriverFeature.addExtension("Extension: Tracking Logger", "tracking-logger", loggerExtension);
+
+        UsageMonitorDriver usageMonitorExtension = new UsageMonitorDriver();
+        usageMonitorExtension.getPublisher().addSubscriber(new LoggerUsageSubscriber(usageMonitorExtension));
+        DriverFeature.addExtension("Extension: Usage Monitor", "usage-monitor", usageMonitorExtension);
+
+        RecordingDriver recordingExtension = new RecordingDriver();
+        RecordingFeature.setup(recordingExtension);
+        DriverFeature.addExtension("Extension: Recording", "recording", recordingExtension);
+    }
+
 
     private static void setupWindows(Application application) {
 
@@ -253,7 +253,7 @@ public class TestJobs2dApp {
                 FeaturesManager.setupAllFeatures(app);
 
                 setupDrivers(app);
-                RecordingFeature.setup(DriverFeature.getDriverManager());
+                setupExtensions(app);
                 setupPresetTests(app);
                 setupCommandTests(app);
                 setupLogger(app);
