@@ -55,6 +55,14 @@ public class CompoundCommand implements ICompoundCommand {
         commands.add(command);
     }
 
+    public void setCommand(int index, DriverCommand command) {
+        commands.set(index, command);
+    }
+
+    public DriverCommand getCommand(int index) {
+        return commands.get(index);
+    }
+
     /**
      * Remove a command from the compound command.
      *

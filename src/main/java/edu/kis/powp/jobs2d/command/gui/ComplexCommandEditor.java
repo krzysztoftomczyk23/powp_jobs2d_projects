@@ -1,41 +1,44 @@
 package edu.kis.powp.jobs2d.command.gui;
 
-import edu.kis.powp.jobs2d.command.CompoundCommand;
-import edu.kis.powp.jobs2d.command.DriverCommand;
-import edu.kis.powp.jobs2d.command.OperateToCommand;
-import edu.kis.powp.jobs2d.command.SetPositionCommand;
+import edu.kis.powp.appbase.gui.WindowComponent;
+import edu.kis.powp.jobs2d.command.*;
 import edu.kis.powp.jobs2d.command.manager.CommandManager;
+import edu.kis.powp.jobs2d.command.visitor.CommandEditVisitor;
+import edu.kis.powp.jobs2d.command.visitor.CommandTransformVisitor;
+import edu.kis.powp.jobs2d.command.visitor.CommandTreeBuilderVisitor;
+import edu.kis.powp.jobs2d.drivers.transformations.CoordinateTransformer;
+import edu.kis.powp.jobs2d.drivers.transformations.FlipTransformer;
+import edu.kis.powp.jobs2d.drivers.transformations.RotateTransformer;
+import edu.kis.powp.jobs2d.drivers.transformations.ScaleTransformer;
+import edu.kis.powp.jobs2d.drivers.transformations.ShiftTranformer;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
-import java.lang.reflect.Field;
-import java.util.Iterator;
-import java.util.List;
 
-public class ComplexCommandEditor extends JFrame {
-
+public class ComplexCommandEditor extends JFrame implements WindowComponent {
     private final CommandManager commandManager;
-    private final CompoundCommand workingCopy;
-    private final DefaultListModel<String> listModel = new DefaultListModel<>();
-    private final JList<String> commandList = new JList<>(listModel);
+
+    private ICompoundCommand workingCopy;
+    private DriverCommand selectedCommand;
+    private JTree commandTree;
+    private DefaultTreeModel treeModel;
     private final JTextField xField = new JTextField();
     private final JTextField yField = new JTextField();
 
     public ComplexCommandEditor(CommandManager commandManager) {
         this.commandManager = commandManager;
 
-        if (commandManager.getCurrentCommand() == null) {
-            workingCopy = new CompoundCommand();
-        } else {
-            workingCopy = (CompoundCommand) commandManager.getCurrentCommand().deepCopy();
-        }
-
         setTitle("Complex Command Editor");
-        setSize(500, 400);
+        setSize(600, 500);
         setLayout(new BorderLayout());
-        refreshList();
 
-        add(new JScrollPane(commandList), BorderLayout.CENTER);
+        commandTree = new JTree();
+        add(new JScrollPane(commandTree), BorderLayout.CENTER);
+
+        rebuildTree();
+
         JPanel topPanel = new JPanel(new GridLayout(2, 2));
 
         topPanel.add(new JLabel("X"));
@@ -44,74 +47,215 @@ public class ComplexCommandEditor extends JFrame {
         topPanel.add(yField);
 
         add(topPanel, BorderLayout.NORTH);
-        JPanel buttons = new JPanel(new GridLayout(1, 2));
 
-        JButton removeButton = new JButton("Remove");
-        JButton applyButton = new JButton("Apply");
+        commandTree.addTreeSelectionListener(e -> {
 
-        buttons.add(removeButton);
-        buttons.add(applyButton);
+            DefaultMutableTreeNode node =
+                    (DefaultMutableTreeNode) commandTree.getLastSelectedPathComponent();
 
-        add(buttons, BorderLayout.SOUTH);
+            if (node == null) return;
 
-        commandList.addListSelectionListener(e -> loadCoordinates());
+            Object obj = node.getUserObject();
 
-        removeButton.addActionListener(e -> removeCommand());
-        applyButton.addActionListener(e -> applyCoordinates());
+            if (obj instanceof DriverCommand) {
+                selectedCommand = (DriverCommand) obj;
+                updateFieldsFromSelection();
+            } else {
+                selectedCommand = null;
+            }
+        });
+
+        JPanel bottomPanel = new JPanel(new GridLayout(2, 1));
+
+        JPanel transformPanel = new JPanel(new GridLayout(2, 3));
+        transformPanel.setBorder(BorderFactory.createTitledBorder("Whole Command Transformations"));
+
+        JButton scaleUp = new JButton("Scale 2x");
+        JButton scaleDown = new JButton("Scale 0.5x");
+        JButton rotate = new JButton("Rotate 45");
+        JButton flipX = new JButton("Flip X");
+        JButton flipY = new JButton("Flip Y");
+        JButton shift = new JButton("Shift");
+
+        transformPanel.add(scaleUp);
+        transformPanel.add(scaleDown);
+        transformPanel.add(rotate);
+        transformPanel.add(flipX);
+        transformPanel.add(flipY);
+        transformPanel.add(shift);
+
+        JPanel editPanel = new JPanel(new GridLayout(1, 3));
+        editPanel.setBorder(BorderFactory.createTitledBorder("Selected Command"));
+
+        JButton apply = new JButton("Apply");
+        JButton moveUp = new JButton("Move Up");
+        JButton moveDown = new JButton("Move Down");
+
+        editPanel.add(apply);
+        editPanel.add(moveUp);
+        editPanel.add(moveDown);
+
+        bottomPanel.add(transformPanel);
+        bottomPanel.add(editPanel);
+
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        scaleUp.addActionListener(e ->
+                applyTransformation(new ScaleTransformer(2.0, 2.0))
+        );
+
+        scaleDown.addActionListener(e ->
+                applyTransformation(new ScaleTransformer(0.5, 0.5))
+        );
+
+        rotate.addActionListener(e ->
+                applyTransformation(new RotateTransformer(45.0))
+        );
+
+        flipX.addActionListener(e ->
+                applyTransformation(new FlipTransformer(true, false))
+        );
+
+        flipY.addActionListener(e ->
+                applyTransformation(new FlipTransformer(false, true))
+        );
+
+        shift.addActionListener(e ->
+                applyTransformation(new ShiftTranformer(Integer.parseInt(xField.getText()),
+                        Integer.parseInt(yField.getText())))
+        );
+
+        moveUp.addActionListener(e -> {
+            moveUpDeep((CompoundCommand) workingCopy, selectedCommand);
+            commandManager.setCurrentCommand(workingCopy);
+            rebuildTree();
+        });
+
+        moveDown.addActionListener(e -> {
+            moveDownDeep((CompoundCommand) workingCopy, selectedCommand);
+            commandManager.setCurrentCommand(workingCopy);
+            rebuildTree();
+        });
+
+        apply.addActionListener(e -> applyChanges());
     }
 
+    private void applyTransformation(CoordinateTransformer transformer) {
+        CommandTransformVisitor visitor = new CommandTransformVisitor(transformer);
+        workingCopy.accept(visitor);
+        DriverCommand transformed = visitor.getTransformedCommand();
 
-    private void refreshList() {
-        listModel.clear();
-        Iterator<DriverCommand> iterator = workingCopy.iterator();
-
-        while (iterator.hasNext()) {
-            DriverCommand command = iterator.next();
-            listModel.addElement(commandToString(command));
+        if (transformed instanceof CompoundCommand) {
+            workingCopy = (CompoundCommand) transformed;
+        } else {
+            CompoundCommand wrapper = new CompoundCommand();
+            wrapper.addCommand(transformed);
+            workingCopy = wrapper;
         }
+
+        commandManager.setCurrentCommand(workingCopy);
+        rebuildTree();
     }
 
-    private String commandToString(DriverCommand command) {
-        if (command instanceof SetPositionCommand) {
-            SetPositionCommand c = (SetPositionCommand) command;
-            return "SetPosition(" + c.getPosX() + ", " + c.getPosY() + ")";
+    private boolean moveUpDeep(CompoundCommand parent, DriverCommand target) {
+        for (int i = 0; i < parent.getCommandCount(); i++) {
+            DriverCommand current = parent.getCommand(i);
+
+            if (current == target) {
+                if (i == 0) {
+                    return true;
+                }
+
+                DriverCommand previous = parent.getCommand(i - 1);
+
+                parent.setCommand(i - 1, current);
+                parent.setCommand(i, previous);
+
+                return true;
+            }
+
+            if (current instanceof CompoundCommand) {
+                boolean moved =
+                        moveUpDeep((CompoundCommand) current, target);
+                if (moved) {
+                    return true;
+                }
+            }
         }
-        if (command instanceof OperateToCommand) {
-            OperateToCommand c = (OperateToCommand) command;
-            return "OperateTo(" + c.getPosX() + ", " + c.getPosY() + ")";
-        }
-        return command.toString();
+
+        return false;
     }
 
-    private void loadCoordinates() {
-        int index = commandList.getSelectedIndex();
-        if (index < 0) {
+    private boolean moveDownDeep(CompoundCommand parent, DriverCommand target) {
+        for (int i = 0; i < parent.getCommandCount(); i++) {
+
+            DriverCommand current = parent.getCommand(i);
+
+            if (current == target) {
+
+                if (i >= parent.getCommandCount() - 1) {
+                    return true;
+                }
+
+                DriverCommand next = parent.getCommand(i + 1);
+
+                parent.setCommand(i + 1, current);
+                parent.setCommand(i, next);
+
+                return true;
+            }
+
+            if (current instanceof CompoundCommand) {
+                boolean moved =
+                        moveDownDeep((CompoundCommand) current, target);
+
+                if (moved) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void rebuildTree() {
+        loadWorkingCopy();
+        CommandTreeBuilderVisitor visitor = new CommandTreeBuilderVisitor();
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("ROOT");
+        visitor.init(root);
+
+        workingCopy.accept(visitor);
+        treeModel = new DefaultTreeModel(root);
+        commandTree.setModel(treeModel);
+        commandTree.revalidate();
+        commandTree.repaint();
+    }
+
+    private void loadWorkingCopy() {
+        DriverCommand current = commandManager.getCurrentCommand();
+
+        if (current == null) {
+            workingCopy = new CompoundCommand();
             return;
         }
-        DriverCommand command = getCommands().get(index);
 
-        if (command instanceof SetPositionCommand) {
-            SetPositionCommand c = (SetPositionCommand) command;
+        DriverCommand copy = current.deepCopy();
 
-            xField.setText(String.valueOf(c.getPosX()));
-            yField.setText(String.valueOf(c.getPosY()));
-        }
-
-        if (command instanceof OperateToCommand) {
-            OperateToCommand c = (OperateToCommand) command;
-            xField.setText(String.valueOf(c.getPosX()));
-            yField.setText(String.valueOf(c.getPosY()));
+        if (copy instanceof CompoundCommand) {
+            workingCopy = (CompoundCommand) copy;
+        } else {
+            CompoundCommand wrapper = new CompoundCommand();
+            wrapper.addCommand(copy);
+            workingCopy = wrapper;
         }
     }
 
-    private void applyCoordinates() {
-        int index = commandList.getSelectedIndex();
-        if (index < 0) {
+    private void applyChanges() {
+        if (selectedCommand == null) {
             return;
         }
 
-        int x;
-        int y;
+        int x, y;
 
         try {
             x = Integer.parseInt(xField.getText());
@@ -121,45 +265,69 @@ public class ComplexCommandEditor extends JFrame {
             return;
         }
 
-        DriverCommand oldCommand = getCommands().get(index);
-        if (oldCommand instanceof SetPositionCommand) {
-            getCommands().set(index, new SetPositionCommand(x, y));
-        }
-        if (oldCommand instanceof OperateToCommand) {
-            getCommands().set(index, new OperateToCommand(x, y));
-        }
+        CommandEditVisitor visitor = new CommandEditVisitor(x, y);
+        selectedCommand.accept(visitor);
+
+        DriverCommand updated = visitor.getResult();
+
+        replaceDeep((CompoundCommand) workingCopy, selectedCommand, updated);
 
         commandManager.setCurrentCommand(workingCopy);
-        refreshList();
-        commandList.setSelectedIndex(index);
+
+        rebuildTree();
     }
 
-    private void removeCommand() {
-        int index = commandList.getSelectedIndex();
-        if (index < 0) {
+    private void updateFieldsFromSelection() {
+        if (selectedCommand == null) {
             return;
         }
 
-        getCommands().remove(index);
-        commandManager.setCurrentCommand(workingCopy);
-        refreshList();
-
-        if (!listModel.isEmpty()) {
-            if (index >= listModel.size()) {
-                commandList.setSelectedIndex(listModel.size() - 1);
-            } else {
-                commandList.setSelectedIndex(index);
-            }
+        if (selectedCommand instanceof SetPositionCommand) {
+            SetPositionCommand c = (SetPositionCommand) selectedCommand;
+            xField.setText(String.valueOf(c.getPosX()));
+            yField.setText(String.valueOf(c.getPosY()));
+            return;
         }
+
+        if (selectedCommand instanceof OperateToCommand) {
+            OperateToCommand c = (OperateToCommand) selectedCommand;
+            xField.setText(String.valueOf(c.getPosX()));
+            yField.setText(String.valueOf(c.getPosY()));
+            return;
+        }
+
+        xField.setText("");
+        yField.setText("");
     }
 
-    private List<DriverCommand> getCommands() {
-        try {
-            Field field = CompoundCommand.class.getDeclaredField("commands");
-            field.setAccessible(true);
-            return (List<DriverCommand>) field.get(workingCopy);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    private boolean replaceDeep(CompoundCommand parent, DriverCommand target, DriverCommand replacement) {
+        for (int i = 0; i < parent.getCommandCount(); i++) {
+
+            DriverCommand current = parent.getCommand(i);
+
+            if (current == target) {
+                parent.setCommand(i, replacement);
+                return true;
+            }
+
+            if (current instanceof CompoundCommand) {
+                boolean replaced = replaceDeep((CompoundCommand) current, target, replacement);
+                if (replaced) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public void HideIfVisibleAndShowIfHidden() {
+        if (this.isVisible()) {
+            this.setVisible(false);
+        } else {
+            rebuildTree();
+            this.setVisible(true);
         }
     }
 }
