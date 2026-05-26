@@ -4,6 +4,7 @@ import edu.kis.powp.appbase.gui.WindowComponent;
 import edu.kis.powp.jobs2d.command.*;
 import edu.kis.powp.jobs2d.command.manager.CommandManager;
 import edu.kis.powp.jobs2d.command.visitor.CommandEditVisitor;
+import edu.kis.powp.jobs2d.command.visitor.CommandPositionReaderVisitor;
 import edu.kis.powp.jobs2d.command.visitor.CommandTransformVisitor;
 import edu.kis.powp.jobs2d.command.visitor.CommandTreeBuilderVisitor;
 import edu.kis.powp.jobs2d.drivers.transformations.*;
@@ -16,7 +17,7 @@ import java.awt.*;
 public class ComplexCommandEditor extends JFrame implements WindowComponent {
     private final CommandManager commandManager;
 
-    private ICompoundCommand workingCopy;
+    private CompoundCommand workingCopy;
     private DriverCommand selectedCommand;
     private JTree commandTree;
     private DefaultTreeModel treeModel;
@@ -122,13 +123,13 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
         );
 
         moveUp.addActionListener(e -> {
-            moveUpDeep((CompoundCommand) workingCopy, selectedCommand);
+            moveUpDeep(workingCopy, selectedCommand);
             commandManager.setCurrentCommand(workingCopy);
             rebuildTree();
         });
 
         moveDown.addActionListener(e -> {
-            moveDownDeep((CompoundCommand) workingCopy, selectedCommand);
+            moveDownDeep(workingCopy, selectedCommand);
             commandManager.setCurrentCommand(workingCopy);
             rebuildTree();
         });
@@ -139,15 +140,8 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
     private void applyTransformation(CoordinateTransformer transformer) {
         CommandTransformVisitor visitor = new CommandTransformVisitor(transformer);
         workingCopy.accept(visitor);
-        DriverCommand transformed = visitor.getTransformedCommand();
 
-        if (transformed instanceof CompoundCommand) {
-            workingCopy = (CompoundCommand) transformed;
-        } else {
-            CompoundCommand wrapper = new CompoundCommand();
-            wrapper.addCommand(transformed);
-            workingCopy = wrapper;
-        }
+        workingCopy = asCompound(visitor.getTransformedCommand());
 
         commandManager.setCurrentCommand(workingCopy);
         rebuildTree();
@@ -171,8 +165,7 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
             }
 
             if (current instanceof CompoundCommand) {
-                boolean moved =
-                        moveUpDeep((CompoundCommand) current, target);
+                boolean moved = moveUpDeep((CompoundCommand) current, target);
                 if (moved) {
                     return true;
                 }
@@ -202,8 +195,7 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
             }
 
             if (current instanceof CompoundCommand) {
-                boolean moved =
-                        moveDownDeep((CompoundCommand) current, target);
+                boolean moved = moveDownDeep((CompoundCommand) current, target);
 
                 if (moved) {
                     return true;
@@ -235,15 +227,7 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
             return;
         }
 
-        DriverCommand copy = current.deepCopy();
-
-        if (copy instanceof CompoundCommand) {
-            workingCopy = (CompoundCommand) copy;
-        } else {
-            CompoundCommand wrapper = new CompoundCommand();
-            wrapper.addCommand(copy);
-            workingCopy = wrapper;
-        }
+        workingCopy = asCompound(current.deepCopy());
     }
 
     private void applyChanges() {
@@ -266,7 +250,7 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
 
         DriverCommand updated = visitor.getResult();
 
-        replaceDeep((CompoundCommand) workingCopy, selectedCommand, updated);
+        replaceDeep(workingCopy, selectedCommand, updated);
 
         commandManager.setCurrentCommand(workingCopy);
 
@@ -278,22 +262,19 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
             return;
         }
 
-        if (selectedCommand instanceof SetPositionCommand) {
-            SetPositionCommand c = (SetPositionCommand) selectedCommand;
-            xField.setText(String.valueOf(c.getPosX()));
-            yField.setText(String.valueOf(c.getPosY()));
-            return;
-        }
+        CommandPositionReaderVisitor visitor = new CommandPositionReaderVisitor();
+        selectedCommand.accept(visitor);
 
-        if (selectedCommand instanceof OperateToCommand) {
-            OperateToCommand c = (OperateToCommand) selectedCommand;
-            xField.setText(String.valueOf(c.getPosX()));
-            yField.setText(String.valueOf(c.getPosY()));
-            return;
-        }
+        Integer x = visitor.getX();
+        Integer y = visitor.getY();
 
-        xField.setText("");
-        yField.setText("");
+        if (x != null && y != null) {
+            xField.setText(String.valueOf(x));
+            yField.setText(String.valueOf(y));
+        } else {
+            xField.setText("");
+            yField.setText("");
+        }
     }
 
     private boolean replaceDeep(CompoundCommand parent, DriverCommand target, DriverCommand replacement) {
@@ -315,6 +296,16 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
         }
 
         return false;
+    }
+
+    private CompoundCommand asCompound(DriverCommand command) {
+        if (command instanceof CompoundCommand) {
+            return (CompoundCommand) command;
+        }
+
+        CompoundCommand wrapper = new CompoundCommand();
+        wrapper.addCommand(command);
+        return wrapper;
     }
 
     @Override
