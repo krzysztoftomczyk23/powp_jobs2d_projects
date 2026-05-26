@@ -1,10 +1,10 @@
 package edu.kis.powp.jobs2d.drivers.transformations;
 
-public class ShiftTranformer implements CoordinateTransformer {
+public class ShiftTransformer implements CoordinateTransformer {
     private final int dx;
     private final int dy;
 
-    public ShiftTranformer(int dx, int dy) {
+    public ShiftTransformer(int dx, int dy) {
         this.dx = dx;
         this.dy = dy;
     }

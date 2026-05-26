@@ -6,11 +6,7 @@ import edu.kis.powp.jobs2d.command.manager.CommandManager;
 import edu.kis.powp.jobs2d.command.visitor.CommandEditVisitor;
 import edu.kis.powp.jobs2d.command.visitor.CommandTransformVisitor;
 import edu.kis.powp.jobs2d.command.visitor.CommandTreeBuilderVisitor;
-import edu.kis.powp.jobs2d.drivers.transformations.CoordinateTransformer;
-import edu.kis.powp.jobs2d.drivers.transformations.FlipTransformer;
-import edu.kis.powp.jobs2d.drivers.transformations.RotateTransformer;
-import edu.kis.powp.jobs2d.drivers.transformations.ScaleTransformer;
-import edu.kis.powp.jobs2d.drivers.transformations.ShiftTranformer;
+import edu.kis.powp.jobs2d.drivers.transformations.*;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -121,7 +117,7 @@ public class ComplexCommandEditor extends JFrame implements WindowComponent {
         );
 
         shift.addActionListener(e ->
-                applyTransformation(new ShiftTranformer(Integer.parseInt(xField.getText()),
+                applyTransformation(new ShiftTransformer(Integer.parseInt(xField.getText()),
                         Integer.parseInt(yField.getText())))
         );
 
