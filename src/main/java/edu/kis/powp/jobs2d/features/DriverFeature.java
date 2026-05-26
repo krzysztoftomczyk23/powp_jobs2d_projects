@@ -6,6 +6,7 @@ import edu.kis.powp.jobs2d.drivers.CurrentDriverInfoObserver;
 import edu.kis.powp.jobs2d.drivers.DriverManager;
 import edu.kis.powp.jobs2d.drivers.SelectDriverMenuOptionListener;
 import edu.kis.powp.jobs2d.drivers.visitor.VisitableDriver;
+import edu.kis.powp.jobs2d.events.SelectToggleExtensionOptionListener;
 
 public class DriverFeature implements IFeature {
 
@@ -55,6 +56,25 @@ public class DriverFeature implements IFeature {
      */
     public static void updateDriverInfo() {
         app.updateInfo(driverManager.getCurrentDriver().toString());
+    }
+
+
+    /**
+     * Add extension driver to context, create toggle checkbox button in driver menu.
+     * Extension can be enabled or disabled at runtime by the user.
+     *
+     * @param name      Button name displayed in the menu.
+     * @param key       Unique key identifying the extension in the driver manager.
+     * @param extension VisitableDriver extension object.
+     */
+    public static void addExtension(String name, String key, VisitableDriver extension) {
+        SelectToggleExtensionOptionListener listener = new SelectToggleExtensionOptionListener(
+                driverManager,
+                key,
+                extension,
+                false
+        );
+        app.addComponentMenuElementWithCheckBox(DriverFeature.class, name, listener, false);
     }
 
 }
