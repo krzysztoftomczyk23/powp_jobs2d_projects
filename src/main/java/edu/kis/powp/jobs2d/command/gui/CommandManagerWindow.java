@@ -142,10 +142,6 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
         observerListField.setText(observerListString);
     }
 
-    private void openCommandEditor() {
-        new ComplexCommandEditor(commandManager).setVisible(true);
-    }
-
     @Override
     public void HideIfVisibleAndShowIfHidden() {
         updateObserverListField();
