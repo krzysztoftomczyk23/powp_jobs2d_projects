@@ -171,6 +171,8 @@ public class TestJobs2dApp {
         CommandManagerWindow commandManager = new CommandManagerWindow(CommandsFeature.getDriverCommandManager());
         application.addWindowComponent("Command Manager", commandManager);
 
+        ComplexCommandEditor complexCommandEditor = new ComplexCommandEditor(CommandsFeature.getDriverCommandManager());
+        application.addWindowComponent("Complex Command Editor", complexCommandEditor);
         CommandCatalogWindow commandCatalogWindow = new CommandCatalogWindow(
                 CommandsFeature.getDriverCommandManager(),
                 CommandsFeature.getCommandCatalog()
