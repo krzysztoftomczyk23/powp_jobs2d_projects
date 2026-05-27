@@ -10,7 +10,7 @@ public class LoggingPassThroughMissingCanvasStrategy implements MissingCanvasStr
     private boolean loggedMissingCanvas;
 
     @Override
-    public Point handleMissingCanvas(int x, int y, String driverName) {
+    public Point resolveCoordinatesWithoutCanvas(int x, int y, String driverName) {
         if (!loggedMissingCanvas) {
             logger.info("CanvasClampingDriver (\"" + driverName + "\"): no canvas format selected - "
                     + "coordinates pass through without clamping. Choose a format in the Canvas menu.");
@@ -20,7 +20,7 @@ public class LoggingPassThroughMissingCanvasStrategy implements MissingCanvasStr
     }
 
     @Override
-    public void handleCanvasAvailable(String driverName) {
+    public void onCanvasAvailable(String driverName) {
         loggedMissingCanvas = false;
     }
 }

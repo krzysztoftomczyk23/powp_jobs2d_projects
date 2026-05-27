@@ -42,9 +42,9 @@ public class CanvasClampingDriver implements VisitableDriver {
     private Point clamp(int x, int y) {
         ICanvas canvas = canvasSupplier.get();
         if (canvas == null) {
-            return missingCanvasStrategy.handleMissingCanvas(x, y, name);
+            return missingCanvasStrategy.resolveCoordinatesWithoutCanvas(x, y, name);
         }
-        missingCanvasStrategy.handleCanvasAvailable(name);
+        missingCanvasStrategy.onCanvasAvailable(name);
         return canvas.clampToBounds(x, y);
     }
 
