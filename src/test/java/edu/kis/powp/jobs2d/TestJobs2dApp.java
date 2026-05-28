@@ -16,6 +16,7 @@ import edu.kis.powp.jobs2d.drivers.usage.LoggerUsageSubscriber;
 import edu.kis.powp.jobs2d.drivers.RealTimeDriver;
 import edu.kis.powp.jobs2d.drivers.RecordingDriver;
 import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
+import edu.kis.powp.jobs2d.drivers.bounds.CanvasClampingDriver;
 import edu.kis.powp.jobs2d.drivers.logger.TrackingLoggerDriver;
 import edu.kis.powp.jobs2d.drivers.packet_composite.CompositeDriver;
 import edu.kis.powp.jobs2d.drivers.transformations.*;
@@ -100,6 +101,13 @@ public class TestJobs2dApp {
 
         DriverFeature.addDriver("Line Simulator", driver);
         DriverFeature.getDriverManager().setCurrentDriver(driver);
+
+        VisitableDriver boundedLineInner = new LineDriverAdapter(drawerController, LineFactory.getBasicLine(), "basic");
+        VisitableDriver canvasBoundedLine = new CanvasClampingDriver(
+                boundedLineInner,
+                CanvasFeature::getCanvas,
+                "Line Simulator (canvas-bounded)");
+        DriverFeature.addDriver(canvasBoundedLine.toString(), canvasBoundedLine);
 
         driver = new LineDriverAdapter(drawerController, LineFactory.getSpecialLine(), "special");
         DriverFeature.addDriver("Special line Simulator", driver);

@@ -3,6 +3,7 @@ package edu.kis.powp.jobs2d.drivers.visitor;
 import edu.kis.powp.jobs2d.drivers.RealTimeDriver;
 import edu.kis.powp.jobs2d.drivers.RecordingDriver;
 import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
+import edu.kis.powp.jobs2d.drivers.bounds.CanvasClampingDriver;
 import edu.kis.powp.jobs2d.drivers.logger.TrackingLoggerDriver;
 import edu.kis.powp.jobs2d.drivers.packet_composite.CompositeDriver;
 import edu.kis.powp.jobs2d.drivers.transformations.TransformingDriver;
@@ -44,6 +45,12 @@ public class FullNameGetterVisitor implements DriverVisitor {
 
     @Override
     public void visit(TransformingDriver driver) {
+        builder.append(driver.toString());
+        driver.getInnerDriver().accept(this);
+    }
+
+    @Override
+    public void visit(CanvasClampingDriver driver) {
         builder.append(driver.toString());
         driver.getInnerDriver().accept(this);
     }

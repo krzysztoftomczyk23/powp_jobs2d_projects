@@ -3,6 +3,7 @@ package edu.kis.powp.jobs2d.drivers.visitor;
 import edu.kis.powp.jobs2d.drivers.RealTimeDriver;
 import edu.kis.powp.jobs2d.drivers.RecordingDriver;
 import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
+import edu.kis.powp.jobs2d.drivers.bounds.CanvasClampingDriver;
 import edu.kis.powp.jobs2d.drivers.logger.TrackingLoggerDriver;
 import edu.kis.powp.jobs2d.drivers.packet_composite.CompositeDriver;
 import edu.kis.powp.jobs2d.drivers.transformations.TransformingDriver;
@@ -20,6 +21,7 @@ public interface DriverVisitor {
     public void visit(RecordingDriver driver);
 
     public void visit(TransformingDriver driver);
+    public void visit(CanvasClampingDriver driver);
 
     public void visit(UsageMonitorDriver usageMonitorDriver);
 }

@@ -1,5 +1,7 @@
 package edu.kis.powp.jobs2d.canvas;
 
+import java.awt.Point;
+
 import edu.kis.powp.jobs2d.command.ICompoundCommand;
 import edu.kis.powp.jobs2d.command.ShapeCommandFactory;
 
@@ -37,6 +39,28 @@ public class CircleCanvas implements ICanvas {
         long dx = x - centerX;
         long dy = y - centerY;
         return dx * dx + dy * dy <= (long) effectiveRadius * effectiveRadius;
+    }
+
+    @Override
+    public Point clampToBounds(int x, int y) {
+        if (contains(x, y)) {
+            return new Point(x, y);
+        }
+        int effectiveRadius = radius - margin;
+        if (effectiveRadius <= 0) {
+            return new Point(centerX, centerY);
+        }
+        double dx = x - centerX;
+        double dy = y - centerY;
+        double dist = Math.hypot(dx, dy);
+        if (dist < 1e-9) {
+            return new Point(centerX + effectiveRadius, centerY);
+        }
+        double scale = effectiveRadius / dist;
+        return new Point(
+                (int) Math.round(centerX + dx * scale),
+                (int) Math.round(centerY + dy * scale)
+        );
     }
 
     @Override

@@ -1,5 +1,7 @@
 package edu.kis.powp.jobs2d.canvas;
 
+import java.awt.Point;
+
 import edu.kis.powp.jobs2d.command.ICompoundCommand;
 import edu.kis.powp.jobs2d.command.ShapeCommandFactory;
 
@@ -40,6 +42,19 @@ public class RectangleCanvas implements ICanvas {
                 && x <= halfWidth - margin
                 && y >= -halfHeight + margin
                 && y <= halfHeight - margin;
+    }
+
+    @Override
+    public Point clampToBounds(int x, int y) {
+        int halfWidth = width / 2;
+        int halfHeight = height / 2;
+        int minX = -halfWidth + margin;
+        int maxX = halfWidth - margin;
+        int minY = -halfHeight + margin;
+        int maxY = halfHeight - margin;
+        int cx = Math.max(minX, Math.min(maxX, x));
+        int cy = Math.max(minY, Math.min(maxY, y));
+        return new Point(cx, cy);
     }
 
     @Override

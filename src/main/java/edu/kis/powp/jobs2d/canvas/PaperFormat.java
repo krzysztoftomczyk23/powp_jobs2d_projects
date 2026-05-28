@@ -1,5 +1,7 @@
 package edu.kis.powp.jobs2d.canvas;
 
+import java.awt.Point;
+
 import edu.kis.powp.jobs2d.command.ICompoundCommand;
 
 public enum PaperFormat implements ICanvas {
@@ -15,6 +17,11 @@ public enum PaperFormat implements ICanvas {
     @Override
     public boolean contains(int x, int y) {
         return canvas.contains(x, y);
+    }
+
+    @Override
+    public Point clampToBounds(int x, int y) {
+        return canvas.clampToBounds(x, y);
     }
 
     @Override

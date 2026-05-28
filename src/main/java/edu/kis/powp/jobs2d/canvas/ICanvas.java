@@ -1,5 +1,7 @@
 package edu.kis.powp.jobs2d.canvas;
 
+import java.awt.Point;
+
 import edu.kis.powp.jobs2d.command.ICompoundCommand;
 
 /**
@@ -17,6 +19,17 @@ public interface ICanvas {
      * @return true if the point is within bounds, false if it exceeds them
      */
     boolean contains(int x, int y);
+
+    /**
+     * Returns the nearest point that lies in the drawable area (same predicate as
+     * {@link #contains(int, int)}). If the input is already inside, it is returned
+     * unchanged. Used by drivers that must not send the device outside the canvas.
+     *
+     * @param x requested x-coordinate
+     * @param y requested y-coordinate
+     * @return point with clamped coordinates
+     */
+    Point clampToBounds(int x, int y);
 
     /**
      * @return CompoundCommand which draws the canvas guides
