@@ -1,8 +1,13 @@
 package edu.kis.powp.jobs2d.features;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import edu.kis.legacy.drawer.shape.ILine;
 import edu.kis.legacy.drawer.shape.LineFactory;
 import edu.kis.powp.appbase.Application;
+import edu.kis.powp.jobs2d.canvas.CircleCanvas;
 import edu.kis.powp.jobs2d.canvas.ICanvas;
 import edu.kis.powp.jobs2d.canvas.PaperFormat;
 import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
@@ -10,6 +15,15 @@ import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
 public class CanvasFeature implements IFeature {
     private static ICanvas currentFormat;
     private static ILine guidesLineType = LineFactory.getSpecialLine();
+
+    private static final List<ICanvas> availableCanvases = new ArrayList<>();
+
+    static {
+        for (PaperFormat format : PaperFormat.values()) {
+            registerCanvas(format);
+        }
+        registerCanvas(new CircleCanvas("Circle r=200", 0, 0, 200, 20));
+    }
 
     @Override
     public void setup(Application application) {
@@ -24,9 +38,30 @@ public class CanvasFeature implements IFeature {
     public static void setupCanvasPlugin(Application application) {
         application.addComponentMenu(CanvasFeature.class, "Canvas", 0);
 
-        for (PaperFormat format : PaperFormat.values()) {
-            application.addComponentMenuElement(CanvasFeature.class, format.getName(), event -> setCanvas(format));
+        for (ICanvas canvas : availableCanvases) {
+            application.addComponentMenuElement(CanvasFeature.class, canvas.getName(), event -> setCanvas(canvas));
         }
+    }
+
+    /**
+     * Register an additional canvas so it becomes available throughout the
+     * application (menu, previews, ...). This is the OCP extension point:
+     * supporting a new canvas type requires only a {@code registerCanvas} call,
+     * no changes to the GUI components that consume {@link #getAvailableCanvases()}.
+     *
+     * @param canvas canvas to register
+     */
+    public static void registerCanvas(ICanvas canvas) {
+        if (canvas != null && !availableCanvases.contains(canvas)) {
+            availableCanvases.add(canvas);
+        }
+    }
+
+    /**
+     * @return immutable view of all canvases known to the application
+     */
+    public static List<ICanvas> getAvailableCanvases() {
+        return Collections.unmodifiableList(availableCanvases);
     }
 
     public static void clearPanel() {

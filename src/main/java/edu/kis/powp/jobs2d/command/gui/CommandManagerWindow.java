@@ -9,84 +9,112 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import edu.kis.powp.appbase.gui.WindowComponent;
+import edu.kis.powp.jobs2d.canvas.ICanvas;
+import edu.kis.powp.jobs2d.canvas.gui.CanvasPanel;
 import edu.kis.powp.jobs2d.command.ICompoundCommand;
 import edu.kis.powp.jobs2d.command.io.CommandImporter;
 import edu.kis.powp.jobs2d.command.io.CommandImporterFactory;
 import edu.kis.powp.jobs2d.command.manager.CommandManager;
+import edu.kis.powp.jobs2d.features.CanvasFeature;
 import edu.kis.powp.observer.Subscriber;
 
 public class CommandManagerWindow extends JFrame implements WindowComponent {
 
+    private static final long serialVersionUID = 9204679248304669948L;
+
     private CommandManager commandManager;
 
     private JTextArea currentCommandField;
-
     private String observerListString;
     private JTextArea observerListField;
 
-    /**
-     *
-     */
-    private static final long serialVersionUID = 9204679248304669948L;
+    private CanvasPanel canvasPanel;
+    private JComboBox<ICanvas> canvasSelector;
 
     public CommandManagerWindow(CommandManager commandManager) {
         this.setTitle("Command Manager");
-        this.setSize(400, 400);
+        this.setSize(700, 700);
         Container content = this.getContentPane();
         content.setLayout(new GridBagLayout());
 
         this.commandManager = commandManager;
 
         GridBagConstraints c = new GridBagConstraints();
-
-        observerListField = new JTextArea("");
-        observerListField.setEditable(false);
         c.fill = GridBagConstraints.BOTH;
         c.weightx = 1;
         c.gridx = 0;
-        c.weighty = 1;
+
+        observerListField = new JTextArea("");
+        observerListField.setEditable(false);
+        c.weighty = 0.2;
+        c.gridy = 0;
         content.add(observerListField, c);
         updateObserverListField();
 
         currentCommandField = new JTextArea("");
         currentCommandField.setEditable(false);
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
+        c.weighty = 0.2;
+        c.gridy = 1;
         content.add(currentCommandField, c);
         updateCurrentCommandField();
 
+        c.weighty = 0.0;
+        c.gridy = 2;
+        content.add(new JLabel("Preview canvas:"), c);
+
+        canvasSelector = new JComboBox<>(buildCanvasModel());
+        canvasSelector.setRenderer(new CanvasListRenderer());
+        canvasSelector.addActionListener(e -> updateCanvasPanelCanvas());
+        c.gridy = 3;
+        content.add(canvasSelector, c);
+
+        canvasPanel = new CanvasPanel();
+        c.weighty = 1.0;
+        c.gridy = 4;
+        content.add(canvasPanel, c);
+        updateCanvasPanelCanvas();
+        updateCanvasPanelCommand();
+
         JButton btnImportCommands = new JButton("Import command");
         btnImportCommands.addActionListener((ActionEvent e) -> this.importCommands());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
+        c.weighty = 0.0;
+        c.gridy = 5;
         content.add(btnImportCommands, c);
 
         JButton btnClearCommand = new JButton("Clear command");
         btnClearCommand.addActionListener((ActionEvent e) -> this.clearCommand());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
+        c.gridy = 6;
         content.add(btnClearCommand, c);
 
         JButton btnClearObservers = new JButton("Delete observers");
         btnClearObservers.addActionListener((ActionEvent e) -> this.deleteObservers());
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.weighty = 1;
+        c.gridy = 7;
         content.add(btnClearObservers, c);
+    }
+
+    /**
+     * Builds the canvas-selector model from the canvases registered in
+     * {@link CanvasFeature}. A leading {@code null} entry represents "no canvas".
+     * Adding a new canvas type requires no change here - it is picked up
+     * automatically from the registry (OCP).
+     */
+    private DefaultComboBoxModel<ICanvas> buildCanvasModel() {
+        DefaultComboBoxModel<ICanvas> model = new DefaultComboBoxModel<>();
+        model.addElement(null);
+        for (ICanvas canvas : CanvasFeature.getAvailableCanvases()) {
+            model.addElement(canvas);
+        }
+        return model;
     }
 
     private void clearCommand() {
@@ -96,6 +124,20 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
 
     public void updateCurrentCommandField() {
         currentCommandField.setText(commandManager.getCurrentCommandString());
+        updateCanvasPanelCommand();
+    }
+
+    private void updateCanvasPanelCommand() {
+        if (canvasPanel != null) {
+            canvasPanel.setCommand(commandManager.getCurrentCommand());
+        }
+    }
+
+    private void updateCanvasPanelCanvas() {
+        if (canvasPanel == null) {
+            return;
+        }
+        canvasPanel.setCanvas((ICanvas) canvasSelector.getSelectedItem());
     }
 
     public void deleteObservers() {
