@@ -113,10 +113,6 @@ public class TestJobs2dApp {
         DriverFeature.addDriver("Special line Simulator", driver);
         DriverFeature.updateDriverInfo();
 
-        CompositeDriver basicCompositeDriver = new CompositeDriver("Basic & Log Composite Driver");
-        basicCompositeDriver.addDriver(driver);
-        DriverFeature.addDriver(basicCompositeDriver.toString(), basicCompositeDriver);
-
         CoordinateTransformer scale = new ScaleTransformer(2.0, 2.0);
         VisitableDriver scaledDriver = new TransformingDriver(driver, scale, "Transform: Scaled 2x");
         DriverFeature.addDriver(scaledDriver.toString(), scaledDriver);
