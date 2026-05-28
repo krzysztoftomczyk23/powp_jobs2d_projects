@@ -11,12 +11,21 @@ import edu.kis.powp.jobs2d.canvas.CircleCanvas;
 import edu.kis.powp.jobs2d.canvas.ICanvas;
 import edu.kis.powp.jobs2d.canvas.PaperFormat;
 import edu.kis.powp.jobs2d.drivers.adapter.LineDriverAdapter;
+import edu.kis.powp.observer.Publisher;
+import edu.kis.powp.observer.Subscriber;
 
 public class CanvasFeature implements IFeature {
     private static ICanvas currentFormat;
     private static ILine guidesLineType = LineFactory.getSpecialLine();
 
     private static final List<ICanvas> availableCanvases = new ArrayList<>();
+
+    /**
+     * Notifies subscribers whenever the current canvas changes, so that other
+     * components (e.g. the command preview) can stay consistent with
+     * {@link #getCanvas()} - the single source of truth for the current canvas.
+     */
+    private static final Publisher canvasChangePublisher = new Publisher();
 
     static {
         for (PaperFormat format : PaperFormat.values()) {
@@ -77,6 +86,17 @@ public class CanvasFeature implements IFeature {
         return currentFormat;
     }
 
+    /**
+     * Subscribe to canvas changes. Subscribers are notified whenever
+     * {@link #setCanvas(ICanvas)} changes the current canvas, allowing them to
+     * read the new value from {@link #getCanvas()}.
+     *
+     * @param subscriber subscriber to notify on canvas change
+     */
+    public static void subscribeToCanvasChange(Subscriber subscriber) {
+        canvasChangePublisher.addSubscriber(subscriber);
+    }
+
     public static void setGuidesLineType(ILine lineType) {
         guidesLineType = lineType;
     }
@@ -93,5 +113,6 @@ public class CanvasFeature implements IFeature {
         format.toCommand().execute(new LineDriverAdapter(DrawerFeature.getDrawerController(), guidesLineType, "Canvas Guides"));
 
         currentFormat = format;
+        canvasChangePublisher.notifyObservers();
     }
 }

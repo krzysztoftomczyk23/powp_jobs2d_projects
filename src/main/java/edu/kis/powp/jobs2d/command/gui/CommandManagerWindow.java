@@ -74,7 +74,8 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
 
         canvasSelector = new JComboBox<>(buildCanvasModel());
         canvasSelector.setRenderer(new CanvasListRenderer());
-        canvasSelector.addActionListener(e -> updateCanvasPanelCanvas());
+        canvasSelector.setSelectedItem(CanvasFeature.getCanvas());
+        canvasSelector.addActionListener(e -> onCanvasSelected());
         c.gridy = 3;
         content.add(canvasSelector, c);
 
@@ -82,8 +83,12 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
         c.weighty = 1.0;
         c.gridy = 4;
         content.add(canvasPanel, c);
-        updateCanvasPanelCanvas();
+        syncCanvasFromFeature();
         updateCanvasPanelCommand();
+
+        // Keep the preview consistent with CanvasFeature even when the canvas is
+        // changed elsewhere (e.g. from the application's Canvas menu).
+        CanvasFeature.subscribeToCanvasChange(this::syncCanvasFromFeature);
 
         JButton btnImportCommands = new JButton("Import command");
         btnImportCommands.addActionListener((ActionEvent e) -> this.importCommands());
@@ -133,11 +138,34 @@ public class CommandManagerWindow extends JFrame implements WindowComponent {
         }
     }
 
-    private void updateCanvasPanelCanvas() {
-        if (canvasPanel == null) {
-            return;
+    /**
+     * Called when the user picks a canvas in the selector. Delegates to
+     * {@link CanvasFeature#setCanvas(ICanvas)} so that the application has a
+     * single source of truth for the current canvas; the preview is then
+     * refreshed by the canvas-change notification via {@link #syncCanvasFromFeature()}.
+     */
+    private void onCanvasSelected() {
+        ICanvas selected = (ICanvas) canvasSelector.getSelectedItem();
+        if (selected != null && selected != CanvasFeature.getCanvas()) {
+            CanvasFeature.setCanvas(selected);
+        } else {
+            // "None" selected, or no change reported by the feature - refresh directly.
+            syncCanvasFromFeature();
         }
-        canvasPanel.setCanvas((ICanvas) canvasSelector.getSelectedItem());
+    }
+
+    /**
+     * Synchronises the selector and the preview with the current canvas held by
+     * {@link CanvasFeature}, the single source of truth.
+     */
+    private void syncCanvasFromFeature() {
+        ICanvas current = CanvasFeature.getCanvas();
+        if (canvasSelector.getSelectedItem() != current) {
+            canvasSelector.setSelectedItem(current);
+        }
+        if (canvasPanel != null) {
+            canvasPanel.setCanvas(current);
+        }
     }
 
     public void deleteObservers() {
