@@ -26,7 +26,7 @@ public class ExtensionsFeature implements IFeature {
 
 
     /**
-     * Add extension driver to context, create toggle checkbox button in driver menu.
+     * Add extension driver to context, create toggle checkbox button in "Extensions" menu.
      * Extension can be enabled or disabled at runtime by the user.
      *
      * @param name      Button name displayed in the menu.
@@ -35,6 +35,11 @@ public class ExtensionsFeature implements IFeature {
      * @param driverManager DriverManager used to register and toggle the extension.
      */
     public static void addExtension(String name, String key, VisitableDriver extension, DriverManager driverManager) {
+        if (app == null) {
+            throw new IllegalStateException(
+                    "Application is not initialized. Ensure ExtensionsFeature is registered before adding extensions."
+            );
+        }
         SelectToggleExtensionOptionListener listener = new SelectToggleExtensionOptionListener(
                 driverManager,
                 key,
